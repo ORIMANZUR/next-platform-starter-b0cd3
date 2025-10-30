@@ -119,22 +119,24 @@ export default function FocusContainerTracker() {
   };
 
   const toggleTask = async (containerId, index) => {
-    const updatedContainers = containers.map((c) => {
-      if (c.id === containerId) {
-        const updatedTasks = c.tasks.map((t, i) => (i === index ? { ...t, done: !t.done } : t));
-        const progress = Math.round((updatedTasks.filter((t) => t.done).length / updatedTasks.length) * 100);
-        if (!c.tasks[index].done) {
-          playSound(soundLinks.success);
-          celebrate();
-        }
-        return { ...c, tasks: updatedTasks, progress };
-      }
-      return c;
-    });
+    const container = containers.find((c) => c.id === containerId);
+    if (!container) return;
+    
+    const updatedTasks = container.tasks.map((t, i) => (i === index ? { ...t, done: !t.done } : t));
+    const progress = Math.round((updatedTasks.filter((t) => t.done).length / updatedTasks.length) * 100);
+    
+    if (!container.tasks[index].done) {
+      playSound(soundLinks.success);
+      celebrate();
+    }
+    
     if (dbAvailable && firestore) {
       const containerRef = firestore.doc(firestore.db, "containers", containerId);
-      await firestore.updateDoc(containerRef, updatedContainers.find((c) => c.id === containerId));
+      await firestore.updateDoc(containerRef, { tasks: updatedTasks, progress });
     } else {
+      const updatedContainers = containers.map((c) => 
+        c.id === containerId ? { ...c, tasks: updatedTasks, progress } : c
+      );
       saveLocal(updatedContainers);
     }
   };
@@ -150,18 +152,19 @@ export default function FocusContainerTracker() {
 
   const deleteTask = async (containerId, taskIndex) => {
     playSound(soundLinks.click);
-    const updatedContainers = containers.map((c) => {
-      if (c.id === containerId) {
-        const updatedTasks = c.tasks.filter((_, i) => i !== taskIndex);
-        const progress = updatedTasks.length > 0 ? Math.round((updatedTasks.filter((t) => t.done).length / updatedTasks.length) * 100) : 0;
-        return { ...c, tasks: updatedTasks, progress };
-      }
-      return c;
-    });
+    const container = containers.find((c) => c.id === containerId);
+    if (!container) return;
+    
+    const updatedTasks = container.tasks.filter((_, i) => i !== taskIndex);
+    const progress = updatedTasks.length > 0 ? Math.round((updatedTasks.filter((t) => t.done).length / updatedTasks.length) * 100) : 0;
+    
     if (dbAvailable && firestore) {
       const containerRef = firestore.doc(firestore.db, "containers", containerId);
-      await firestore.updateDoc(containerRef, updatedContainers.find((c) => c.id === containerId));
+      await firestore.updateDoc(containerRef, { tasks: updatedTasks, progress });
     } else {
+      const updatedContainers = containers.map((c) => 
+        c.id === containerId ? { ...c, tasks: updatedTasks, progress } : c
+      );
       saveLocal(updatedContainers);
     }
   };
