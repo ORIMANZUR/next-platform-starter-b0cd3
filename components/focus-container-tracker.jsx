@@ -102,18 +102,18 @@ export default function FocusContainerTracker() {
   const addTask = async (id, taskText) => {
     if (!taskText.trim()) return;
     playSound(soundLinks.click);
-    const updatedContainers = containers.map((c) => {
-      if (c.id === id) {
-        const updatedTasks = [...c.tasks, { text: taskText, done: false }];
-        const progress = Math.round((updatedTasks.filter((t) => t.done).length / updatedTasks.length) * 100);
-        return { ...c, tasks: updatedTasks, progress };
-      }
-      return c;
-    });
+    const container = containers.find((c) => c.id === id);
+    if (!container) return;
+    
+    const updatedTasks = [...(container.tasks || []), { text: taskText, done: false }];
+    const progress = Math.round((updatedTasks.filter((t) => t.done).length / updatedTasks.length) * 100);
+    const updatedContainer = { ...container, tasks: updatedTasks, progress };
+    
     if (dbAvailable && firestore) {
       const containerRef = firestore.doc(firestore.db, "containers", id);
-      await firestore.updateDoc(containerRef, updatedContainers.find((c) => c.id === id));
+      await firestore.updateDoc(containerRef, { tasks: updatedTasks, progress });
     } else {
+      const updatedContainers = containers.map((c) => c.id === id ? updatedContainer : c);
       saveLocal(updatedContainers);
     }
   };
@@ -246,11 +246,11 @@ export default function FocusContainerTracker() {
           <div key={col.title} className="flex flex-col gap-6">
             <h2 className="text-xl font-medium text-gray-700 mb-3 text-center border-b border-gray-300 pb-2">{col.title}</h2>
             {containers.filter((c) => c.day === col.day).map((container) => (
-              <motion.div key={container.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <motion.div key={container.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="group">
                 <Card className={`rounded-2xl shadow-sm hover:shadow-md transition border-2 ${container.color} bg-white relative`}>
                   <button
                     onClick={() => deleteContainer(container.id)}
-                    className="absolute top-2 right-2 text-gray-400 opacity-0 hover:opacity-100 transition"
+                    className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 transition hover:text-red-500"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -300,8 +300,11 @@ export default function FocusContainerTracker() {
                             {t.text}
                           </div>
                           <button
-                            onClick={() => deleteTask(container.id, i)}
-                            className="text-gray-400 opacity-0 hover:opacity-100 transition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteTask(container.id, i);
+                            }}
+                            className="text-gray-400 hover:text-red-500 transition"
                           >
                             <X className="h-4 w-4" />
                           </button>
