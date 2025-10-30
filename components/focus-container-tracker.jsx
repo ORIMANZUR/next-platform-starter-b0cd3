@@ -88,12 +88,13 @@ export default function FocusContainerTracker() {
     playSound(soundLinks.click);
     const color = colors[Math.floor(Math.random() * colors.length)];
     const day = getDayKey(0);
-    const newContainer = { id: Date.now().toString(), title: newTitle, time: newTime, tasks: [], progress: 0, color, day };
+    const newContainer = { title: newTitle, time: newTime, tasks: [], progress: 0, color, day };
 
     if (dbAvailable && firestore) {
       await firestore.addDoc(firestore.collection(firestore.db, "containers"), newContainer);
     } else {
-      saveLocal([...containers, newContainer]);
+      const localContainer = { id: Date.now().toString(), ...newContainer };
+      saveLocal([...containers, localContainer]);
     }
     setNewTitle("");
     setNewTime("");
