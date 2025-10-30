@@ -148,6 +148,24 @@ export default function FocusContainerTracker() {
     }
   };
 
+  const deleteTask = async (containerId, taskIndex) => {
+    playSound(soundLinks.click);
+    const updatedContainers = containers.map((c) => {
+      if (c.id === containerId) {
+        const updatedTasks = c.tasks.filter((_, i) => i !== taskIndex);
+        const progress = updatedTasks.length > 0 ? Math.round((updatedTasks.filter((t) => t.done).length / updatedTasks.length) * 100) : 0;
+        return { ...c, tasks: updatedTasks, progress };
+      }
+      return c;
+    });
+    if (dbAvailable && firestore) {
+      const containerRef = firestore.doc(firestore.db, "containers", containerId);
+      await firestore.updateDoc(containerRef, updatedContainers.find((c) => c.id === containerId));
+    } else {
+      saveLocal(updatedContainers);
+    }
+  };
+
   useEffect(() => {
     let interval;
     if (timerRunning && secondsLeft > 0) {
@@ -282,7 +300,7 @@ export default function FocusContainerTracker() {
                             {t.text}
                           </div>
                           <button
-                            onClick={() => deleteContainer(container.id)}
+                            onClick={() => deleteTask(container.id, i)}
                             className="text-gray-400 opacity-0 hover:opacity-100 transition"
                           >
                             <X className="h-4 w-4" />
